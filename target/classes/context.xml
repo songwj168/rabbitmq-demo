@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+                           http://www.springframework.org/schema/context
+                           http://www.springframework.org/schema/context/spring-context-4.0.xsd
+                           http://www.springframework.org/schema/rabbit
+                           http://www.springframework.org/schema/rabbit/spring-rabbit-1.7.xsd">
+
+    <!-- 引入RabbitMQ配置文件 -->
+    <context:property-placeholder location="rabbitmq.properties" />
+    <!-- 创建RabbitMQ的连接工厂 -->
+    <rabbit:connection-factory id="connectionFactory" host="${rabbit.host}" port="${rabbit.port}"
+                               username="${rabbit.username}" password="${rabbit.password}" virtual-host="${rabbit.virtualHost}" />
+
+    <!-- 定义Rabbit模板，指定连接工厂以及定义exchange -->
+    <rabbit:template id="rabbitTemplate" connection-factory="connectionFactory" exchange="fanoutExchange" />
+
+    <!-- MQ的管理，包括队列、交换机声明等 -->
+    <rabbit:admin connection-factory="connectionFactory" />
+
+    <!-- 定义队列，自动声明 -->
+    <rabbit:queue name="myQueue" auto-declare="true" durable="true" />
+
+    <!-- 定义交换机，自动声明，并绑定队列 -->
+    <rabbit:fanout-exchange name="fanoutExchange" auto-declare="true">
+        <rabbit:bindings>
+            <rabbit:binding queue="myQueue"/>
+        </rabbit:bindings>
+    </rabbit:fanout-exchange>
+
+    <!-- 消费者 -->
+    <bean id="myConsumer" class="com.swj.rabbitmq.spring.MyConsumer" />
+
+    <!-- 队列监听 -->
+    <rabbit:listener-container connection-factory="connectionFactory">
+        <rabbit:listener ref="myConsumer" method="listen" queue-names="myQueue" />
+    </rabbit:listener-container>
+
+</beans>
